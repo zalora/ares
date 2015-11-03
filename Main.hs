@@ -1,7 +1,11 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE TypeOperators #-}
+
 module Main (main) where
 
 import Control.Arrow
 import Control.Concurrent
+import Control.Monad.IO.Class
 import Data.Monoid
 import System.Directory
 import System.Exit (exitFailure)
@@ -11,6 +15,8 @@ import System.Posix.Signals
 import App
 import Service
 import Process
+import Servant
+import Network.Wai.Handler.Warp
 
 
 main :: IO ()
@@ -26,15 +32,32 @@ main = do
     _ <- forkIO (reapService angel >> stop)
     _ <- forkIO (reapService nginx >> stop)
 
+    warp <- do
+        let port = 3000
+            reload = all (==Right ()) <$> mapM reloadService [angel, nginx]
+
+        forkIO (run port (serve api (server reload)))
+
     waitForStop
     hPutStrLn stderr "Stopping..."
     stopService angel
     stopService nginx
+    killThread warp
 
     hPutStrLn stderr . ("Angel result: " <>) . show =<< reapService angel
     hPutStrLn stderr . ("Nginx result: " <>) . show =<< reapService nginx
 
     exitFailure
+
+
+api :: Proxy API
+api = Proxy
+
+type API =
+    "reload" :> Post '[JSON] Bool
+
+server reload =
+    liftIO reload
 
 
 angelService :: ServiceConfig
