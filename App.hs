@@ -35,29 +35,28 @@ installApp dir name path =
         then install
         else return Nothing
   where
-    profileBase = dir </> name
-    profile = profileBase </> "app"
-    install =
-        createDirectoryIfMissing True profileBase >>
-        spawnProcess "nix-env" ["-p", profile, "--set", path] >>=
-        waitForProcess >>
+    install = do
+        let dirName = dir </> name
+        createDirectoryIfMissing True dirName
+        ph <- spawnProcess "nix-env" ["-p", dirName </> "app", "--set", path]
+        _ <- waitForProcess ph
         getApp dir name
 
 uninstallApp :: App -> IO ()
-uninstallApp = removeDirectoryRecursive . takeDirectory . profileDir
+uninstallApp = removeDirectoryRecursive . profileDir
 
 getApp :: FilePath -> String -> IO (Maybe App)
 getApp dir name =
     if isAppName name
         then do
-            let profile = dir </> name </> "app"
-            path <- canonicalizePath profile
+            let dirName = dir </> name
+            path <- canonicalizePath (dirName </> "app")
             cli <- getCli path
             needA <- doesNeedAngel path
             needN <- doesNeedNginx path
             return . Just $ App
                 { appName = name
-                , profileDir = profile
+                , profileDir = dirName
                 , appPath = path
                 , cliFiles = cli
                 , needAngel = needA
