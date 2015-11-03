@@ -1,6 +1,8 @@
 module App
     ( App (..)
     , getApps
+    , installApp
+    , uninstallApp
     )
   where
 
@@ -11,6 +13,7 @@ import qualified Data.Attoparsec.Text as Atto
 import qualified Data.Text as Text
 import System.Directory
 import System.FilePath
+import System.Process
 
 data App = App
     { appName :: String
@@ -25,6 +28,23 @@ data App = App
 getApps :: FilePath -> IO [App]
 getApps dir =
     catMaybes <$> (mapM (getApp dir) =<< getDirectoryContents dir)
+
+installApp :: FilePath -> String -> FilePath -> IO (Maybe App)
+installApp dir name path =
+    if isAppName name
+        then install
+        else return Nothing
+  where
+    profileBase = dir </> name
+    profile = profileBase </> "app"
+    install =
+        createDirectoryIfMissing True profileBase >>
+        spawnProcess "nix-env" ["-p", profile, "--set", path] >>=
+        waitForProcess >>
+        getApp dir name
+
+uninstallApp :: App -> IO ()
+uninstallApp = removeDirectoryRecursive . takeDirectory . profileDir
 
 getApp :: FilePath -> String -> IO (Maybe App)
 getApp dir name =
