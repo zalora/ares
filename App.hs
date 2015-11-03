@@ -5,7 +5,7 @@ module App
   where
 
 import Control.Monad (filterM)
-import Data.List (zipWith5)
+import Data.Maybe (catMaybes)
 import Data.Text (Text)
 import qualified Data.Attoparsec.Text as Atto
 import qualified Data.Text as Text
@@ -22,34 +22,44 @@ data App = App
   deriving Show
 
 getApps :: FilePath -> IO [App]
-getApps profilesDir = do
-    names <- filter isAppName <$> getDirectoryContents profilesDir
-    paths <- mapM toAppPath names
-    clis <- mapM getCli paths
-    angelNeeds <- mapM doesNeedAngel paths
-    nginxNeeds <- mapM doesNeedNginx paths
-    return (zipWith5 App names paths clis angelNeeds nginxNeeds)
+getApps dir =
+    catMaybes <$> (mapM (getApp dir) =<< getDirectoryContents dir)
+
+getApp :: FilePath -> String -> IO (Maybe App)
+getApp dir name =
+    if isAppName name
+        then do
+            path <- toAppPath name
+            cli <- getCli path
+            needA <- doesNeedAngel path
+            needN <- doesNeedNginx path
+            return . Just $ App name path cli needA needN
+        else return Nothing
   where
-    isAppName = either (const False) (const True) . parseAppName
+    toAppPath = canonicalizePath . (dir </>) . (</> "app")
 
-    toAppPath = canonicalizePath . (profilesDir </>) . (</> "app")
+getCli :: FilePath -> IO [FilePath]
+getCli path = do
+    let cliDir = path </> "bin"
+    isDir <- doesDirectoryExist cliDir
+    if isDir
+        then filterM doesFileExist
+                        =<< mapM (canonicalizePath . (cliDir </>))
+                        =<< getDirectoryContents cliDir
+        else return []
 
-    getCli path = do
-        let cliDir = path </> "bin"
-        isDir <- doesDirectoryExist cliDir
-        if isDir
-            then filterM doesFileExist
-                            =<< mapM (canonicalizePath . (cliDir </>))
-                            =<< getDirectoryContents cliDir
-            else return []
+doesNeedAngel :: FilePath -> IO Bool
+doesNeedAngel = doesFileExist . (</> "run")
 
-    doesNeedAngel = doesFileExist . (</> "run")
+doesNeedNginx :: FilePath -> IO Bool
+doesNeedNginx path =
+    any (==True) <$> mapM (doesFileExist . ((path </> "nginx") </>))
+        [ "default-locations.conf"
+        , "servers.conf"
+        ]
 
-    doesNeedNginx path =
-        any (==True) <$> mapM (doesFileExist . ((path </> "nginx") </>))
-            [ "default-locations.conf"
-            , "servers.conf"
-            ]
+isAppName :: FilePath -> Bool
+isAppName = either (const False) (const True) . parseAppName
 
 -- `storeName` is based on [`checkStoreName`][1].
 --
