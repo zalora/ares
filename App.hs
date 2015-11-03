@@ -55,7 +55,14 @@ getApp dir name =
             cli <- getCli path
             needA <- doesNeedAngel path
             needN <- doesNeedNginx path
-            return . Just $ App name profile path cli needA needN
+            return . Just $ App
+                { appName = name
+                , profileDir = profile
+                , appPath = path
+                , cliFiles = cli
+                , needAngel = needA
+                , needNginx = needN
+                }
         else return Nothing
 
 getCli :: FilePath -> IO [FilePath]
