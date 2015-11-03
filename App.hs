@@ -14,6 +14,7 @@ import System.FilePath
 
 data App = App
     { appName :: String
+    , profileDir :: FilePath
     , appPath :: FilePath
     , cliFiles :: [FilePath]
     , needAngel :: Bool
@@ -29,14 +30,13 @@ getApp :: FilePath -> String -> IO (Maybe App)
 getApp dir name =
     if isAppName name
         then do
-            path <- toAppPath name
+            let profile = dir </> name </> "app"
+            path <- canonicalizePath profile
             cli <- getCli path
             needA <- doesNeedAngel path
             needN <- doesNeedNginx path
-            return . Just $ App name path cli needA needN
+            return . Just $ App name profile path cli needA needN
         else return Nothing
-  where
-    toAppPath = canonicalizePath . (dir </>) . (</> "app")
 
 getCli :: FilePath -> IO [FilePath]
 getCli path = do
