@@ -2,6 +2,7 @@
 
 module Service
     ( ServiceConfig (..)
+    , ServiceResult
     , Service
     , startService
     , reloadService

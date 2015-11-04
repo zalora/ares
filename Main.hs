@@ -17,11 +17,13 @@ import System.IO
 import System.Posix.Signals
 import App
 import Service
+import Manager
 import Process
 import Servant
 import Network.Socket
 import Network.Wai (Application)
 import Network.Wai.Handler.Warp
+    (defaultSettings, runSettingsSocket, setPort, Port)
 
 
 main :: IO ()
@@ -30,31 +32,27 @@ main = do
 
     let profilesDir = "/nix/var/nix/profiles/per-user/zalora/ares-apps"
 
-    angel <- startService (angelService profilesDir)
-    nginx <- startService (nginxService profilesDir)
+    m <- newManager
+            [ angelService profilesDir
+            , nginxService profilesDir
+            ]
 
     (stop, waitForStop) <- (flip putMVar () &&& readMVar) <$> newEmptyMVar
 
     _ <- installHandler keyboardSignal (Catch stop) Nothing
-    _ <- forkIO (reapService angel >> stop)
-    _ <- forkIO (reapService nginx >> stop)
+    _ <- forkIO (waitForManager m >> stop)
 
     warp <- do
         let port = 3000
             sockFile = "/tmp/zalora/ares.sock"
-            reload = all (==Right ()) <$> mapM reloadService [angel, nginx]
 
-        forkIO (runLocal port sockFile (serve api (server profilesDir reload)))
+        forkIO (runLocal port sockFile (serve api (server profilesDir m)))
 
     waitForStop
     hPutStrLn stderr "Stopping..."
-    stopService angel
-    stopService nginx
     killThread warp
-
-    hPutStrLn stderr . ("Angel result: " <>) . show =<< reapService angel
-    hPutStrLn stderr . ("Nginx result: " <>) . show =<< reapService nginx
-
+    killManager m
+    waitForManager m
     exitFailure
 
 
@@ -72,9 +70,9 @@ type API =
         )
     )
 
-server :: FilePath -> IO Bool -> Server API
-server profilesDir reload =
-    liftIO reload :<|>
+server :: FilePath -> Manager -> Server API
+server profilesDir m =
+    liftIO (reloadManager m) :<|>
     liftIO (getApps profilesDir) :<|>
     (\(AppName name) ->
         liftIO (getApp profilesDir name) :<|>
