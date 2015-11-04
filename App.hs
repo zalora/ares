@@ -1,7 +1,11 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module App
     ( App (..)
+    , AppName (AppName, unAppName)
+    , AppPath (AppPath, unAppPath)
     , getApps
     , installApp
     , uninstallApp
@@ -11,21 +15,24 @@ module App
 import Control.Monad (filterM)
 import Data.Aeson
 import Data.Maybe (catMaybes)
+import Data.Monoid
 import Data.Text (Text)
 import qualified Data.Attoparsec.Text as Atto
 import qualified Data.Text as Text
 import GHC.Generics
+import Servant (FromFormUrlEncoded (fromFormUrlEncoded), FromText (fromText))
 import System.Directory
+--import System.Exit
 import System.FilePath
 import System.Process
 
 data App = App
-    { appName :: String
-    , profileDir :: FilePath
-    , appPath :: FilePath
+    { appName :: AppName
+    , appPath :: AppPath
     , cliFiles :: [FilePath]
     , needAngel :: Bool
     , needNginx :: Bool
+    , profileDir :: FilePath
     }
   deriving
     ( Generic
@@ -33,6 +40,32 @@ data App = App
     )
 
 instance ToJSON App
+
+newtype AppName = AppName { unAppName :: String }
+
+instance FromText AppName where
+    fromText =
+        either (const Nothing) (Just . AppName) . parseAppName . Text.unpack
+
+instance Show AppName
+    where show = unAppName
+
+instance ToJSON AppName
+    where toJSON = toJSON . unAppName
+
+newtype AppPath = AppPath { unAppPath :: FilePath }
+
+instance FromFormUrlEncoded AppPath where
+    fromFormUrlEncoded = \case
+        [(x,"")] -> parseAppPath x
+        _ -> Left "no Nix store path"
+
+instance Show AppPath where
+    show = unAppPath
+
+instance ToJSON AppPath where
+    toJSON = toJSON . unAppPath
+
 
 getApps :: FilePath -> IO [App]
 getApps dir =
@@ -64,12 +97,12 @@ getApp dir name =
             needA <- doesNeedAngel path
             needN <- doesNeedNginx path
             return . Just $ App
-                { appName = name
-                , profileDir = dirName
-                , appPath = path
+                { appName = AppName name
+                , appPath = AppPath path
                 , cliFiles = cli
                 , needAngel = needA
                 , needNginx = needN
+                , profileDir = dirName
                 }
         else return Nothing
 
@@ -107,3 +140,10 @@ storeName = Text.cons <$> Atto.satisfy headChar <*> Atto.takeWhile tailChar
 parseAppName :: FilePath -> Either String String
 parseAppName =
     fmap Text.unpack . Atto.parseOnly (storeName <* Atto.endOfInput) . Text.pack
+
+parseAppPath :: Text -> Either String AppPath
+parseAppPath =
+    fmap (AppPath . Text.unpack) . Atto.parseOnly (storePath1 <* Atto.endOfInput)
+  where
+    storePath1 :: Atto.Parser Text
+    storePath1 = (<>) <$> Atto.string "/nix/store/" <*> storeName

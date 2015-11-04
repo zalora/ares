@@ -85,7 +85,7 @@ angelService profilesDir = service where
             continue
         }
     toAngelConfig = concatMap toAngelEntry . filter needAngel
-    toAngelEntry App{appName=name,appPath=path} =
+    toAngelEntry App{appName=AppName name,appPath=AppPath path} =
         name <> " {\n" <>
         "  exec = " <> show (path </> "run") <> "\n" <>
         "  stdout = " <> show (logFile name "stdout") <> "\n" <>
