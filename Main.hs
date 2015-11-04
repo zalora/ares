@@ -3,8 +3,9 @@
 
 module Main (main) where
 
-import Control.Arrow
+import Control.Arrow ((&&&))
 import Control.Concurrent
+import Control.Exception (bracket)
 import Control.Monad.IO.Class
 import Data.Monoid
 import System.Directory
@@ -16,6 +17,8 @@ import App
 import Service
 import Process
 import Servant
+import Network.Socket
+import Network.Wai (Application)
 import Network.Wai.Handler.Warp
 
 
@@ -36,9 +39,10 @@ main = do
 
     warp <- do
         let port = 3000
+            sockFile = "/tmp/zalora/ares.sock"
             reload = all (==Right ()) <$> mapM reloadService [angel, nginx]
 
-        forkIO (run port (serve api (server profilesDir reload)))
+        forkIO (runLocal port sockFile (serve api (server profilesDir reload)))
 
     waitForStop
     hPutStrLn stderr "Stopping..."
@@ -107,3 +111,15 @@ nginxService = service where
             createDirectoryIfMissing True defLogDir
             continue
         }
+
+
+runLocal :: Port -> FilePath -> Application -> IO ()
+runLocal port sockFile app =
+    bracket mkSock rmSock $ \sock -> do
+        bind sock (SockAddrUnix sockFile)
+        listen sock maxListenQueue
+        runSettingsSocket settings sock app
+  where
+    mkSock = socket AF_UNIX Stream 0
+    rmSock sock = close sock >> removeFile sockFile
+    settings = setPort port defaultSettings
