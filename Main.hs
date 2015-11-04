@@ -23,7 +23,9 @@ main :: IO ()
 main = do
     hSetBuffering stderr LineBuffering
 
-    angel <- startService angelService
+    let profilesDir = "/nix/var/nix/profiles/per-user/zalora/ares-apps"
+
+    angel <- startService (angelService profilesDir)
     nginx <- startService nginxService
 
     (stop, waitForStop) <- (flip putMVar () &&& readMVar) <$> newEmptyMVar
@@ -36,7 +38,7 @@ main = do
         let port = 3000
             reload = all (==Right ()) <$> mapM reloadService [angel, nginx]
 
-        forkIO (run port (serve api (server reload)))
+        forkIO (run port (serve api (server profilesDir reload)))
 
     waitForStop
     hPutStrLn stderr "Stopping..."
@@ -54,19 +56,20 @@ api :: Proxy API
 api = Proxy
 
 type API =
-    "reload" :> Post '[JSON] Bool
+    "reload" :> Post '[JSON] Bool :<|>
+    "apps" :> Get '[JSON] [App]
 
-server reload =
-    liftIO reload
+server profilesDir reload =
+    liftIO reload :<|>
+    liftIO (getApps profilesDir)
 
 
-angelService :: ServiceConfig
-angelService = service where
+angelService :: FilePath -> ServiceConfig
+angelService profilesDir = service where
     dataDir = "/tmp/zalora/data/angel"
     runDir = "/tmp/zalora/run/angel"
     logDir = dataDir </> "log"
     configFile = runDir </> "angel.conf"
-    profilesDir = "/nix/var/nix/profiles/per-user/zalora/ares-apps"
     service = ServiceConfig
         { service_name = "angel"
         , service_dataDir = dataDir

@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveGeneric #-}
+
 module App
     ( App (..)
     , getApps
@@ -7,10 +9,12 @@ module App
   where
 
 import Control.Monad (filterM)
+import Data.Aeson
 import Data.Maybe (catMaybes)
 import Data.Text (Text)
 import qualified Data.Attoparsec.Text as Atto
 import qualified Data.Text as Text
+import GHC.Generics
 import System.Directory
 import System.FilePath
 import System.Process
@@ -23,7 +27,12 @@ data App = App
     , needAngel :: Bool
     , needNginx :: Bool
     }
-  deriving Show
+  deriving
+    ( Generic
+    , Show
+    )
+
+instance ToJSON App
 
 getApps :: FilePath -> IO [App]
 getApps dir =
