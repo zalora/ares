@@ -31,7 +31,7 @@ main = do
     let profilesDir = "/nix/var/nix/profiles/per-user/zalora/ares-apps"
 
     angel <- startService (angelService profilesDir)
-    nginx <- startService nginxService
+    nginx <- startService (nginxService profilesDir)
 
     (stop, waitForStop) <- (flip putMVar () &&& readMVar) <$> newEmptyMVar
 
@@ -101,6 +101,7 @@ angelService profilesDir = service where
             -- TODO exceptions?
             writeFile configFile =<< toAngelConfig <$> getApps profilesDir
             continue
+        , service_isNeeded = any needAngel <$> getApps profilesDir
         }
     toAngelConfig = concatMap toAngelEntry . filter needAngel
     toAngelEntry App{appName=AppName name,appPath=AppPath path} =
@@ -112,8 +113,8 @@ angelService profilesDir = service where
     logFile name logName =
         logDir </> ("angel." <> name <> "." <> logName <> ".log")
 
-nginxService :: ServiceConfig
-nginxService = service where
+nginxService :: FilePath -> ServiceConfig
+nginxService profilesDir = service where
     dataDir = "/tmp/zalora/data/nginx"
     runDir = "/tmp/zalora/run/nginx"
     defLogDir = dataDir </> "logs"
@@ -128,6 +129,7 @@ nginxService = service where
             -- directory exists.
             createDirectoryIfMissing True defLogDir
             continue
+        , service_isNeeded = any needNginx <$> getApps profilesDir
         }
 
 

@@ -28,6 +28,7 @@ data ServiceConfig = ServiceConfig
     , service_runDir :: FilePath
     , service_createProcess :: CreateProcess
     , service_run :: IO () -> IO ()
+    , service_isNeeded :: IO Bool
     }
 
 data Service = Service
