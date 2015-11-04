@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeOperators #-}
 
 module Main (main) where
@@ -26,15 +27,25 @@ import Network.Wai.Handler.Warp
     (defaultSettings, runSettingsSocket, setPort, Port)
 
 
+data Config = Config
+    { port :: Port
+    , profilesDir :: FilePath
+    , sockFile :: FilePath
+    }
+
 main :: IO ()
 main = do
     hSetBuffering stderr LineBuffering
 
-    let profilesDir = "/nix/var/nix/profiles/per-user/zalora/ares-apps"
+    let c@Config{..} = Config
+            { port = 3000
+            , profilesDir = "/nix/var/nix/profiles/per-user/zalora/ares-apps"
+            , sockFile = "/tmp/zalora/ares.sock"
+            }
 
-    m <- newManager
-            [ angelService profilesDir
-            , nginxService profilesDir
+    m <- newManager $ map ($ c)
+            [ angelService
+            , nginxService
             ]
 
     (stop, waitForStop) <- (flip putMVar () &&& readMVar) <$> newEmptyMVar
@@ -42,15 +53,10 @@ main = do
     _ <- installHandler keyboardSignal (Catch stop) Nothing
     _ <- forkIO (waitForManager m >> stop)
 
-    warp <- do
-        let port = 3000
-            sockFile = "/tmp/zalora/ares.sock"
-
-        forkIO (runLocal port sockFile (serve api (server profilesDir m)))
+    w <- forkIO (runLocal port sockFile (serve api (server c m)))
 
     waitForStop
-    hPutStrLn stderr "Stopping..."
-    killThread warp
+    killThread w
     killManager m
     waitForManager m
     exitFailure
@@ -60,18 +66,18 @@ api :: Proxy API
 api = Proxy
 
 type API =
-    "reload" :> Post '[JSON] Bool :<|>
+    "reload" :>
+        Post '[JSON] Bool :<|>
     "apps" :> (
         Get '[JSON] [App] :<|>
         Capture "name" AppName :> (
             Get '[JSON] (Maybe App) :<|>
-            ReqBody '[FormUrlEncoded] AppPath :> Put '[JSON] (Maybe App) :<|>
-            Delete '[JSON] Bool
-        )
-    )
+            ReqBody '[FormUrlEncoded] AppPath :>
+                Put '[JSON] (Maybe App) :<|>
+            Delete '[JSON] Bool ))
 
-server :: FilePath -> Manager -> Server API
-server profilesDir m =
+server :: Config -> Manager -> Server API
+server Config{..} m =
     liftIO (reloadManager m) :<|>
     liftIO (getApps profilesDir) :<|>
     (\(AppName name) ->
@@ -80,12 +86,11 @@ server profilesDir m =
         liftIO . installApp profilesDir name . unAppPath :<|>
         liftIO (getApp profilesDir name >>= \case
             Just app -> uninstallApp app >> return True
-            _ -> return False)
-        )
+            _ -> return False))
 
 
-angelService :: FilePath -> ServiceConfig
-angelService profilesDir = service where
+angelService :: Config -> ServiceConfig
+angelService Config{..} = service where
     dataDir = "/tmp/zalora/data/angel"
     runDir = "/tmp/zalora/run/angel"
     logDir = dataDir </> "log"
@@ -111,8 +116,8 @@ angelService profilesDir = service where
     logFile name logName =
         logDir </> ("angel." <> name <> "." <> logName <> ".log")
 
-nginxService :: FilePath -> ServiceConfig
-nginxService profilesDir = service where
+nginxService :: Config -> ServiceConfig
+nginxService Config{..} = service where
     dataDir = "/tmp/zalora/data/nginx"
     runDir = "/tmp/zalora/run/nginx"
     defLogDir = dataDir </> "logs"
