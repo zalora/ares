@@ -80,8 +80,9 @@ installApp dir name path =
   where
     install = do
         let dirName = dir </> name
+            profile = dirName </> "app"
         createDirectoryIfMissing True dirName
-        ph <- spawnProcess "nix-env" ["-p", dirName </> "app", "--set", path]
+        ph <- spawnProcess "nix-env" ["-p", profile, "--set", path]
         _ <- waitForProcess ph
         getApp dir name
 
@@ -93,18 +94,23 @@ getApp dir name =
     if isAppName name
         then do
             let dirName = dir </> name
-            path <- canonicalizePath (dirName </> "app")
-            cli <- getCli path
-            needA <- doesNeedAngel path
-            needN <- doesNeedNginx path
-            return . Just $ App
-                { appName = AppName name
-                , appPath = AppPath path
-                , cliFiles = cli
-                , needAngel = needA
-                , needNginx = needN
-                , profileDir = dirName
-                }
+                profile = dirName </> "app"
+            exists <- doesDirectoryExist profile
+            if exists
+                then do
+                    path <- canonicalizePath profile
+                    cli <- getCli path
+                    needA <- doesNeedAngel path
+                    needN <- doesNeedNginx path
+                    return . Just $ App
+                        { appName = AppName name
+                        , appPath = AppPath path
+                        , cliFiles = cli
+                        , needAngel = needA
+                        , needNginx = needN
+                        , profileDir = dirName
+                        }
+                else return Nothing
         else return Nothing
 
 getCli :: FilePath -> IO [FilePath]
