@@ -1,4 +1,6 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeOperators #-}
 
 module Main (main) where
@@ -61,11 +63,27 @@ api = Proxy
 
 type API =
     "reload" :> Post '[JSON] Bool :<|>
-    "apps" :> Get '[JSON] [App]
+    "apps" :> (
+        Get '[JSON] [App] :<|>
+        Capture "name" AppName :> (
+            Get '[JSON] (Maybe App) :<|>
+            ReqBody '[FormUrlEncoded] AppPath :> Put '[JSON] (Maybe App) :<|>
+            Delete '[JSON] Bool
+        )
+    )
 
+server :: FilePath -> IO Bool -> Server API
 server profilesDir reload =
     liftIO reload :<|>
-    liftIO (getApps profilesDir)
+    liftIO (getApps profilesDir) :<|>
+    (\(AppName name) ->
+        liftIO (getApp profilesDir name) :<|>
+        -- TODO reload after modifications
+        liftIO . installApp profilesDir name . unAppPath :<|>
+        liftIO (getApp profilesDir name >>= \case
+            Just app -> uninstallApp app >> return True
+            _ -> return False)
+        )
 
 
 angelService :: FilePath -> ServiceConfig

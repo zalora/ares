@@ -6,6 +6,7 @@ module App
     ( App (..)
     , AppName (AppName, unAppName)
     , AppPath (AppPath, unAppPath)
+    , getApp
     , getApps
     , installApp
     , uninstallApp
