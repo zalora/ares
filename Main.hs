@@ -90,12 +90,13 @@ angelService Config{..} = service where
         , service_isNeeded = any needAngel <$> getApps profilesDir
         }
     toAngelConfig = concatMap toAngelEntry . filter needAngel
-    toAngelEntry App{appName=AppName name,appPath=AppPath path} =
-        name <> " {\n" <>
-        "  exec = " <> show (path </> "run") <> "\n" <>
-        "  stdout = " <> show (logFile name "stdout") <> "\n" <>
-        "  stderr = " <> show (logFile name "stderr") <> "\n" <>
-        "}\n"
+    toAngelEntry App{appName=AppName name,appPath=AppPath path} = unlines
+        [ name <> " {"
+        , "  exec = " <> show (path </> "run")
+        , "  stdout = " <> show (logFile name "stdout")
+        , "  stderr = " <> show (logFile name "stderr")
+        , "}"
+        ]
     logFile name logName =
         logDir </> ("angel." <> name <> "." <> logName <> ".log")
 
