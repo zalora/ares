@@ -68,30 +68,30 @@ type API =
             Delete '[JSON] Bool ))
 
 server :: Config -> Manager -> IO () -> Server API
-server Config{..} m stop =
+server c m stop =
     liftIO (reloadManager m) :<|>
     liftIO stop :<|>
-    liftIO (getApps profilesDir) :<|>
+    liftIO (getApps c) :<|>
     (\(AppName name) ->
-        liftIO (getApp profilesDir name) :<|>
+        liftIO (getApp c name) :<|>
         -- TODO reload after modifications
-        liftIO . installApp profilesDir name . unAppPath :<|>
-        liftIO (getApp profilesDir name >>= \case
+        liftIO . installApp c name . unAppPath :<|>
+        liftIO (getApp c name >>= \case
             Just app -> uninstallApp app >> return True
             _ -> return False))
 
 
 angelService :: Config -> ServiceConfig
-angelService Config{..} = ServiceConfig
+angelService c@Config{..} = ServiceConfig
       { service_name = "angel"
       , service_dataDir = dataDir
       , service_runDir = runDir
-      , service_createProcess = proc "angel" [configFile]
+      , service_createProcess = proc angelPath [configFile]
       , service_run = \continue -> do
           -- TODO exceptions?
-          writeFile configFile =<< toAngelConfig <$> getApps profilesDir
+          writeFile configFile =<< toAngelConfig <$> getApps c
           continue
-      , service_isNeeded = any needAngel <$> getApps profilesDir
+      , service_isNeeded = any needAngel <$> getApps c
       }
   where
     configFile = runDir </> "angel.conf"
@@ -107,11 +107,12 @@ angelService Config{..} = ServiceConfig
         ]
 
 nginxService :: Config -> ServiceConfig
-nginxService Config{..} = ServiceConfig
+nginxService c@Config{..} = ServiceConfig
     { service_name = "nginx"
     , service_dataDir = dataDir
     , service_runDir = runDir
-    , service_createProcess = proc "nginx" ["-c", nginxConfigFile, "-p", prefix]
+    , service_createProcess =
+        proc nginxPath ["-c", nginxConfigFile, "-p", prefix]
     , service_run = \continue -> do
         mapM_ (createDirectoryIfMissing True)
             [ builtinLogDir
@@ -119,7 +120,7 @@ nginxService Config{..} = ServiceConfig
             , logDir
             ]
         continue
-    , service_isNeeded = any needNginx <$> getApps profilesDir
+    , service_isNeeded = any needNginx <$> getApps c
     }
   where
     builtinLogDir = fromMaybe (prefix </> "logs") nginxBuiltinLogDir

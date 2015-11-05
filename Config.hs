@@ -27,6 +27,9 @@ data Config = Config
         -- If set to `Nothing`, then use `dataDir </> "logs"`.
         --
         -- [1]: http://nginx.org/en/docs/configure.html
+    , angelPath :: FilePath
+    , nginxPath :: FilePath
+    , nixEnvPath :: FilePath
     }
   deriving (Generic)
 

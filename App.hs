@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module App
     ( App (..)
@@ -13,19 +14,19 @@ module App
     )
   where
 
+import qualified Data.Attoparsec.Text as Atto
+import qualified Data.Text as Text
 import Control.Monad (filterM)
 import Data.Aeson
 import Data.Maybe (catMaybes)
 import Data.Monoid
 import Data.Text (Text)
-import qualified Data.Attoparsec.Text as Atto
-import qualified Data.Text as Text
 import GHC.Generics
 import Servant (FromFormUrlEncoded (fromFormUrlEncoded), FromText (fromText))
 import System.Directory
---import System.Exit
 import System.FilePath
 import System.Process
+import Config
 
 data App = App
     { appName :: AppName
@@ -68,32 +69,32 @@ instance ToJSON AppPath where
     toJSON = toJSON . unAppPath
 
 
-getApps :: FilePath -> IO [App]
-getApps dir =
-    catMaybes <$> (mapM (getApp dir) =<< getDirectoryContents dir)
+getApps :: Config -> IO [App]
+getApps c@Config{..} =
+    catMaybes <$> (mapM (getApp c) =<< getDirectoryContents profilesDir)
 
-installApp :: FilePath -> String -> FilePath -> IO (Maybe App)
-installApp dir name path =
+installApp :: Config -> String -> FilePath -> IO (Maybe App)
+installApp c@Config{..} name path =
     if isAppName name
         then install
         else return Nothing
   where
     install = do
-        let dirName = dir </> name
+        let dirName = profilesDir </> name
             profile = dirName </> "app"
         createDirectoryIfMissing True dirName
-        ph <- spawnProcess "nix-env" ["-p", profile, "--set", path]
+        ph <- spawnProcess nixEnvPath ["-p", profile, "--set", path]
         _ <- waitForProcess ph
-        getApp dir name
+        getApp c name
 
 uninstallApp :: App -> IO ()
 uninstallApp = removeDirectoryRecursive . profileDir
 
-getApp :: FilePath -> String -> IO (Maybe App)
-getApp dir name =
+getApp :: Config -> String -> IO (Maybe App)
+getApp Config{..} name =
     if isAppName name
         then do
-            let dirName = dir </> name
+            let dirName = profilesDir </> name
                 profile = dirName </> "app"
             exists <- doesDirectoryExist profile
             if exists
