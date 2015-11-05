@@ -19,7 +19,8 @@ import System.IO (hPutStrLn, stderr)
 data Config = Config
     { port :: Port
     , profilesDir :: FilePath
-    , sockFile :: FilePath
+    , dataDir :: FilePath
+    , runDir :: FilePath
     }
   deriving (Generic)
 

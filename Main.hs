@@ -12,7 +12,6 @@ import Control.Exception (bracket)
 import Control.Monad.IO.Class
 import Data.Monoid
 import Network.Socket
-import Network.Wai (Application)
 import Network.Wai.Handler.Warp (defaultSettings, runSettingsSocket, setPort)
 import Servant
 import System.Directory
@@ -39,15 +38,13 @@ main = withConfig $ \c@Config{..} -> do
 
     _ <- installHandler keyboardSignal (Catch stop) Nothing
     _ <- forkIO (waitForManager m >> stop)
-
-    w <- forkIO (runLocal port sockFile (serve api (server c m)))
+    w <- forkIO (runWarp c m >> stop)
 
     waitForStop
     killThread w
     killManager m
     waitForManager m
     exitFailure
-
 
 api :: Proxy API
 api = Proxy
@@ -78,8 +75,6 @@ server Config{..} m =
 
 angelService :: Config -> ServiceConfig
 angelService Config{..} = service where
-    dataDir = "/tmp/zalora/data/angel"
-    runDir = "/tmp/zalora/run/angel"
     logDir = dataDir </> "log"
     configFile = runDir </> "angel.conf"
     service = ServiceConfig
@@ -105,8 +100,6 @@ angelService Config{..} = service where
 
 nginxService :: Config -> ServiceConfig
 nginxService Config{..} = service where
-    dataDir = "/tmp/zalora/data/nginx"
-    runDir = "/tmp/zalora/run/nginx"
     defLogDir = dataDir </> "logs"
     configFile = dataDir </> "nginx.conf"
     service = ServiceConfig
@@ -123,13 +116,20 @@ nginxService Config{..} = service where
         }
 
 
-runLocal :: Port -> FilePath -> Application -> IO ()
-runLocal port sockFile app =
-    bracket mkSock rmSock $ \sock -> do
+runWarp :: Config -> Manager -> IO ()
+runWarp c@Config{..} m =
+    withSock sockFile $ \sock -> do
         bind sock (SockAddrUnix sockFile)
         listen sock maxListenQueue
-        runSettingsSocket settings sock app
+        runSettingsSocket settings sock (serve api (server c m))
   where
-    mkSock = socket AF_UNIX Stream 0
-    rmSock sock = close sock >> removeFile sockFile
     settings = setPort port defaultSettings
+    sockFile = runDir </> "warp.sock"
+
+withSock :: FilePath -> (Socket -> IO a) -> IO a
+withSock sockFile =
+    bracket mkSock rmSock
+  where
+    mkSock = createDirectoryIfMissing True sockDir >> socket AF_UNIX Stream 0
+    rmSock sock = close sock >> removeFile sockFile
+    sockDir = takeDirectory sockFile
