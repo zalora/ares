@@ -9,6 +9,7 @@ module Config
   where
 
 import qualified Data.ByteString.Lazy as LBS
+import Control.Applicative
 import Data.Aeson (eitherDecode, FromJSON)
 import Data.Monoid ((<>))
 import GHC.Generics (Generic)

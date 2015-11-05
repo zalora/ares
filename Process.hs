@@ -16,6 +16,7 @@ import qualified Control.Exception as C
 import System.IO
 import System.Process
 import System.Process.Internals
+import System.Exit (ExitCode(ExitSuccess))
 
 withCreateProcess
   :: CreateProcess
@@ -51,6 +52,7 @@ cleanupProcess (mb_stdin, mb_stdout, mb_stderr,
     return ()
   where
     resetCtlcDelegation (ProcessHandle m _) = ProcessHandle m False
+    stopDelegateControlC = endDelegateControlC ExitSuccess
 
 ignoreSigPipe :: IO () -> IO ()
 ignoreSigPipe = C.handle $ \e -> case e of

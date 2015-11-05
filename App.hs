@@ -16,6 +16,7 @@ module App
 
 import qualified Data.Attoparsec.Text as Atto
 import qualified Data.Text as Text
+import Control.Applicative
 import Control.Monad (filterM)
 import Data.Aeson
 import Data.Maybe (catMaybes)

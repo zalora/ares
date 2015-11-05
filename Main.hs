@@ -6,6 +6,7 @@
 
 module Main (main) where
 
+import Control.Applicative
 import Control.Arrow ((&&&))
 import Control.Concurrent
 import Control.Exception (bracket)

@@ -7,6 +7,7 @@ module Manager
     )
   where
 
+import Control.Applicative
 import Control.Concurrent
 import Control.Monad (filterM, when)
 import Control.Monad.Extra (partitionM, whenM)
