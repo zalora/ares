@@ -40,7 +40,7 @@ main = withConfig $ \c@Config{..} -> do
 
     mapM_ (\sig -> installHandler sig (Catch stop) Nothing) [sigINT, sigTERM]
     _ <- forkIO (waitForManager m >> stop)
-    w <- forkIO (runWarp c m >> stop)
+    w <- forkIO (runWarp c api (server c m stop) >> stop)
 
     waitForStop
     killThread w
@@ -54,6 +54,8 @@ api = Proxy
 type API =
     "reload" :>
         Post '[JSON] Bool :<|>
+    "stop" :>
+        Post '[] () :<|>
     "apps" :> (
         Get '[JSON] [App] :<|>
         Capture "name" AppName :> (
@@ -62,9 +64,10 @@ type API =
                 Put '[JSON] (Maybe App) :<|>
             Delete '[JSON] Bool ))
 
-server :: Config -> Manager -> Server API
-server Config{..} m =
+server :: Config -> Manager -> IO () -> Server API
+server Config{..} m stop =
     liftIO (reloadManager m) :<|>
+    liftIO stop :<|>
     liftIO (getApps profilesDir) :<|>
     (\(AppName name) ->
         liftIO (getApp profilesDir name) :<|>
@@ -121,12 +124,12 @@ nginxService Config{..} = ServiceConfig
     prefix = dataDir </> "nginx"
 
 
-runWarp :: Config -> Manager -> IO ()
-runWarp c@Config{..} m =
+runWarp :: HasServer layout => Config -> Proxy layout -> Server layout -> IO ()
+runWarp Config{..} p s =
     withSock sockFile $ \sock -> do
         bind sock (SockAddrUnix sockFile)
         listen sock maxListenQueue
-        runSettingsSocket settings sock (serve api (server c m))
+        runSettingsSocket settings sock (serve p s)
   where
     settings = setPort port defaultSettings
     sockFile = runDir </> "warp.sock"
