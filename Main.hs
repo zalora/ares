@@ -10,6 +10,7 @@ import Control.Arrow ((&&&))
 import Control.Concurrent
 import Control.Exception (bracket)
 import Control.Monad.IO.Class
+import Data.List (intercalate)
 import Data.Maybe (fromMaybe)
 import Data.Monoid
 import Network.Socket
@@ -75,20 +76,21 @@ server Config{..} m =
 
 
 angelService :: Config -> ServiceConfig
-angelService Config{..} = service where
-    logDir = dataDir </> "log"
+angelService Config{..} = ServiceConfig
+      { service_name = "angel"
+      , service_dataDir = dataDir
+      , service_runDir = runDir
+      , service_createProcess = proc "angel" [configFile]
+      , service_run = \continue -> do
+          -- TODO exceptions?
+          writeFile configFile =<< toAngelConfig <$> getApps profilesDir
+          continue
+      , service_isNeeded = any needAngel <$> getApps profilesDir
+      }
+  where
     configFile = runDir </> "angel.conf"
-    service = ServiceConfig
-        { service_name = "angel"
-        , service_dataDir = dataDir
-        , service_runDir = runDir
-        , service_createProcess = proc "angel" [configFile]
-        , service_run = \continue -> do
-            -- TODO exceptions?
-            writeFile configFile =<< toAngelConfig <$> getApps profilesDir
-            continue
-        , service_isNeeded = any needAngel <$> getApps profilesDir
-        }
+    logDir = dataDir </> "log"
+    logFile name sub = logDir </> intercalate "." ["angel", name, sub, "log"]
     toAngelConfig = concatMap toAngelEntry . filter needAngel
     toAngelEntry App{appName=AppName name,appPath=AppPath path} = unlines
         [ name <> " {"
@@ -97,26 +99,26 @@ angelService Config{..} = service where
         , "  stderr = " <> show (logFile name "stderr")
         , "}"
         ]
-    logFile name logName =
-        logDir </> ("angel." <> name <> "." <> logName <> ".log")
 
 nginxService :: Config -> ServiceConfig
-nginxService Config{..} = service where
+nginxService Config{..} = ServiceConfig
+    { service_name = "nginx"
+    , service_dataDir = dataDir
+    , service_runDir = runDir
+    , service_createProcess = proc "nginx" ["-c", nginxConfigFile, "-p", prefix]
+    , service_run = \continue -> do
+        mapM_ (createDirectoryIfMissing True)
+            [ builtinLogDir
+            , prefix
+            , logDir
+            ]
+        continue
+    , service_isNeeded = any needNginx <$> getApps profilesDir
+    }
+  where
+    builtinLogDir = fromMaybe (prefix </> "logs") nginxBuiltinLogDir
     logDir = dataDir </> "log"
     prefix = dataDir </> "nginx"
-    builtinLogDir = fromMaybe (prefix </> "logs") nginxBuiltinLogDir
-    service = ServiceConfig
-        { service_name = "nginx"
-        , service_dataDir = dataDir
-        , service_runDir = runDir
-        , service_createProcess =
-            proc "nginx" ["-c", nginxConfigFile, "-p", prefix]
-        , service_run = \continue -> do
-            createDirectoryIfMissing True builtinLogDir
-            createDirectoryIfMissing True logDir
-            continue
-        , service_isNeeded = any needNginx <$> getApps profilesDir
-        }
 
 
 runWarp :: Config -> Manager -> IO ()
