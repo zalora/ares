@@ -1,0 +1,29 @@
+Author: tv
+Build-Type: Simple
+Cabal-Version: >= 1.2
+Copyright: 2015 Zalora
+License: BSD3
+Maintainer: tv@zalora.com
+Name: ares
+Version: 0
+
+Executable ares
+  Build-Depends:
+    aeson,
+    attoparsec,
+    base,
+    bytestring,
+    directory,
+    extra,
+    filelock,
+    filepath,
+    network,
+    process,
+    servant-server,
+    text,
+    transformers,
+    unix,
+    wai,
+    warp
+  GHC-Options: -Wall -threaded -rtsopts -with-rtsopts=-N
+  Main-Is: Main.hs
