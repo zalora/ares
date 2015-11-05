@@ -102,14 +102,15 @@ angelService Config{..} = service where
 
 nginxService :: Config -> ServiceConfig
 nginxService Config{..} = service where
-    builtinLogDir = fromMaybe (dataDir </> "logs") nginxBuiltinLogDir
     logDir = dataDir </> "log"
+    prefix = dataDir </> "nginx"
+    builtinLogDir = fromMaybe (prefix </> "logs") nginxBuiltinLogDir
     service = ServiceConfig
         { service_name = "nginx"
         , service_dataDir = dataDir
         , service_runDir = runDir
         , service_createProcess =
-            proc "nginx" ["-c", nginxConfigFile, "-p", dataDir]
+            proc "nginx" ["-c", nginxConfigFile, "-p", prefix]
         , service_run = \continue -> do
             createDirectoryIfMissing True builtinLogDir
             createDirectoryIfMissing True logDir
