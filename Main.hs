@@ -38,7 +38,7 @@ main = withConfig $ \c@Config{..} -> do
 
     (stop, waitForStop) <- (flip putMVar () &&& readMVar) <$> newEmptyMVar
 
-    _ <- installHandler keyboardSignal (Catch stop) Nothing
+    mapM_ (\sig -> installHandler sig (Catch stop) Nothing) [sigINT, sigTERM]
     _ <- forkIO (waitForManager m >> stop)
     w <- forkIO (runWarp c m >> stop)
 
