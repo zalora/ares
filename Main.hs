@@ -17,6 +17,7 @@ import Network.Socket
 import Network.Wai.Handler.Warp (defaultSettings, runSettingsSocket, setPort)
 import Servant
 import System.Directory
+import System.Environment (setEnv)
 import System.Exit (exitFailure)
 import System.FilePath
 import System.IO
@@ -30,6 +31,8 @@ import Service
 main :: IO ()
 main = withConfig $ \c@Config{..} -> do
     hSetBuffering stderr LineBuffering
+    setCurrentDirectory dataDir
+    setEnv "HOME" dataDir
 
     m <- newManager $ map ($ c)
             [ angelService
