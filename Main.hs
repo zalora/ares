@@ -10,6 +10,7 @@ import Control.Arrow ((&&&))
 import Control.Concurrent
 import Control.Exception (bracket)
 import Control.Monad.IO.Class
+import Data.Maybe (fromMaybe)
 import Data.Monoid
 import Network.Socket
 import Network.Wai.Handler.Warp (defaultSettings, runSettingsSocket, setPort)
@@ -100,17 +101,17 @@ angelService Config{..} = service where
 
 nginxService :: Config -> ServiceConfig
 nginxService Config{..} = service where
-    defLogDir = dataDir </> "logs"
-    configFile = dataDir </> "nginx.conf"
+    builtinLogDir = fromMaybe (dataDir </> "logs") nginxBuiltinLogDir
+    logDir = dataDir </> "log"
     service = ServiceConfig
         { service_name = "nginx"
         , service_dataDir = dataDir
         , service_runDir = runDir
-        , service_createProcess = proc "nginx" ["-c", configFile, "-p", dataDir]
+        , service_createProcess =
+            proc "nginx" ["-c", nginxConfigFile, "-p", dataDir]
         , service_run = \continue -> do
-            -- Silence warnings on startup by ensuring the default log
-            -- directory exists.
-            createDirectoryIfMissing True defLogDir
+            createDirectoryIfMissing True builtinLogDir
+            createDirectoryIfMissing True logDir
             continue
         , service_isNeeded = any needNginx <$> getApps profilesDir
         }

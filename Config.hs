@@ -21,6 +21,12 @@ data Config = Config
     , profilesDir :: FilePath
     , dataDir :: FilePath
     , runDir :: FilePath
+    , nginxConfigFile :: FilePath
+    , nginxBuiltinLogDir :: Maybe FilePath
+        -- ^ Directory for logs configured at build time[1].
+        -- If set to `Nothing`, then use `dataDir </> "logs"`.
+        --
+        -- [1]: http://nginx.org/en/docs/configure.html
     }
   deriving (Generic)
 
