@@ -11,37 +11,24 @@ import Control.Concurrent
 import Control.Exception (bracket)
 import Control.Monad.IO.Class
 import Data.Monoid
+import Network.Socket
+import Network.Wai (Application)
+import Network.Wai.Handler.Warp (defaultSettings, runSettingsSocket, setPort)
+import Servant
 import System.Directory
 import System.Exit (exitFailure)
 import System.FilePath
 import System.IO
 import System.Posix.Signals
 import App
-import Service
+import Config
 import Manager
 import Process
-import Servant
-import Network.Socket
-import Network.Wai (Application)
-import Network.Wai.Handler.Warp
-    (defaultSettings, runSettingsSocket, setPort, Port)
-
-
-data Config = Config
-    { port :: Port
-    , profilesDir :: FilePath
-    , sockFile :: FilePath
-    }
+import Service
 
 main :: IO ()
-main = do
+main = withConfig $ \c@Config{..} -> do
     hSetBuffering stderr LineBuffering
-
-    let c@Config{..} = Config
-            { port = 3000
-            , profilesDir = "/nix/var/nix/profiles/per-user/zalora/ares-apps"
-            , sockFile = "/tmp/zalora/ares.sock"
-            }
 
     m <- newManager $ map ($ c)
             [ angelService
