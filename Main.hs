@@ -34,10 +34,9 @@ main = withConfig $ \c@Config{..} -> do
     setCurrentDirectory dataDir
     setEnv "HOME" dataDir
 
-    m <- newManager $ map ($ c)
-            [ angelService
-            , nginxService
-            ]
+    m <- newManager . map ($ c) $
+            [angelService]
+            <> if nginxEnable then [nginxService] else []
 
     (stop, waitForStop) <- (flip putMVar () &&& readMVar) <$> newEmptyMVar
 
