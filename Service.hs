@@ -28,7 +28,7 @@ data ServiceConfig = ServiceConfig
     , service_dataDir :: FilePath
     , service_runDir :: FilePath
     , service_createProcess :: CreateProcess
-    , service_run :: IO () -> IO ()
+    , service_reload :: IO ()
     , service_isNeeded :: IO Bool
     }
 
@@ -45,9 +45,10 @@ startService config = do
     readMVar serviceV
 
 reloadService :: Service -> IO (Either ExitCode ())
-reloadService Service{service_processHandle=ph} =
+reloadService Service{service_config=config,service_processHandle=ph} =
     withProcessHandle ph $ \case
         OpenHandle pid -> do
+            service_reload config
             signalProcess sigHUP pid
             return (Right ())
         ClosedHandle e ->
@@ -76,7 +77,8 @@ runService config serviceV = do
     createDirectoryIfMissing True logDir
     createDirectoryIfMissing True runDir
 
-    withFileLockErr lockFile Exclusive $ \_lock -> service_run config $ do
+    withFileLockErr lockFile Exclusive $ \_lock -> do
+        service_reload config
         withCreateProcess cp $ \_ _ _ ph -> do
             resultV <- newEmptyMVar
             putMVar serviceV Service

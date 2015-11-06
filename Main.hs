@@ -87,10 +87,8 @@ angelService c@Config{..} = ServiceConfig
       , service_dataDir = dataDir
       , service_runDir = runDir
       , service_createProcess = proc angelPath [configFile]
-      , service_run = \continue -> do
-          -- TODO exceptions?
+      , service_reload =
           writeFile configFile =<< toAngelConfig <$> getApps c
-          continue
       , service_isNeeded = any needAngel <$> getApps c
       }
   where
@@ -113,13 +111,12 @@ nginxService c@Config{..} = ServiceConfig
     , service_runDir = runDir
     , service_createProcess =
         proc nginxPath ["-c", nginxConfigFile, "-p", prefix]
-    , service_run = \continue -> do
+    , service_reload =
         mapM_ (createDirectoryIfMissing True)
             [ builtinLogDir
             , prefix
             , logDir
             ]
-        continue
     , service_isNeeded = any needNginx <$> getApps c
     }
   where
