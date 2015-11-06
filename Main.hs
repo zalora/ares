@@ -54,6 +54,8 @@ api :: Proxy API
 api = Proxy
 
 type API =
+    "factory-reset" :>
+        Post '[] () :<|>
     "reload" :>
         Post '[] () :<|>
     "stop" :>
@@ -68,6 +70,7 @@ type API =
 
 server :: Config -> Manager -> IO () -> Server API
 server c m stop =
+    liftIO (factoryReset c) :<|>
     liftIO (reloadManager m) :<|>
     liftIO stop :<|>
     liftIO (getApps c) :<|>

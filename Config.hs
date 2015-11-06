@@ -10,6 +10,7 @@ module Config
 
 import qualified Data.ByteString.Lazy as LBS
 import Data.Aeson (eitherDecode, FromJSON)
+import Data.Map.Strict (Map)
 import Data.Monoid ((<>))
 import GHC.Generics (Generic)
 import Network.Wai.Handler.Warp (Port)
@@ -21,6 +22,7 @@ data Config = Config
     , profilesDir :: FilePath
     , dataDir :: FilePath
     , runDir :: FilePath
+    , builtinApps :: Map String FilePath
     , nginxEnable :: Bool
     , nginxConfigFile :: FilePath
     , nginxBuiltinLogDir :: Maybe FilePath

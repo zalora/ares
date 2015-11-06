@@ -7,6 +7,7 @@ module App
     ( App (..)
     , AppName (AppName, unAppName)
     , AppPath (AppPath, unAppPath)
+    , factoryReset
     , getApp
     , getApps
     , installApp
@@ -15,8 +16,10 @@ module App
   where
 
 import qualified Data.Attoparsec.Text as Atto
+import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 import Control.Monad (filterM)
+import Control.Monad.Extra (unlessM, whenM)
 import Data.Aeson
 import Data.Maybe (catMaybes)
 import Data.Monoid
@@ -68,9 +71,16 @@ instance Show AppPath where
 instance ToJSON AppPath where
     toJSON = toJSON . unAppPath
 
+factoryReset :: Config -> IO ()
+factoryReset c@Config{..} = do
+    whenM (doesDirectoryExist profilesDir)
+          (removeDirectoryRecursive profilesDir)
+    mapM_ (uncurry (installApp c)) (Map.toList builtinApps)
 
 getApps :: Config -> IO [App]
-getApps c@Config{..} =
+getApps c@Config{..} = do
+    unlessM (doesDirectoryExist profilesDir)
+            (factoryReset c)
     catMaybes <$> (mapM (getApp c) =<< getDirectoryContents profilesDir)
 
 installApp :: Config -> String -> FilePath -> IO (Maybe App)

@@ -13,6 +13,7 @@ Executable ares
     attoparsec,
     base,
     bytestring,
+    containers,
     directory,
     extra,
     filelock,
