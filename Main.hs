@@ -15,6 +15,7 @@ import Data.Maybe (fromMaybe)
 import Data.Monoid
 import Network.Socket
 import Network.Wai.Handler.Warp (defaultSettings, runSettingsSocket, setPort)
+import Network.Wai.Middleware.RequestLogger (logStdout)
 import Servant
 import System.Directory
 import System.Environment (setEnv)
@@ -132,8 +133,13 @@ runWarp Config{..} p s =
     withSock sockFile $ \sock -> do
         bind sock (SockAddrUnix sockFile)
         listen sock maxListenQueue
-        runSettingsSocket settings sock (serve p s)
+        runSettingsSocket settings sock app
   where
+    app = logger (serve p s)
+    logger ap rq respond = do
+        rs <- logStdout ap rq respond
+        hFlush stdout
+        return rs
     settings = setPort port defaultSettings
     sockFile = runDir </> "warp.sock"
 

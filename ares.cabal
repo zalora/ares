@@ -25,6 +25,7 @@ Executable ares
     transformers,
     unix,
     wai,
+    wai-extra,
     warp
   GHC-Options: -Wall -threaded -rtsopts -with-rtsopts=-N
   Main-Is: Main.hs
