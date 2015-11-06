@@ -12,7 +12,6 @@ import Control.Monad (filterM, when)
 import Control.Monad.Extra (partitionM, whenM)
 import Data.Maybe (catMaybes)
 import Service
-import System.Exit (ExitCode)
 
 
 data Manager = Manager
@@ -25,7 +24,7 @@ newManager configs =
     Manager <$> mapM (\s -> ManagedService s <$> newEmptyMVar) configs
             <*> newEmptyMVar
 
-reloadManager :: Manager -> IO Bool
+reloadManager :: Manager -> IO ()
 reloadManager m = do
     (stopped, started) <- partitionM ms_isStarted (manager_services m)
     (needReload, needStop) <- partitionM ms_isNeeded started
@@ -33,7 +32,6 @@ reloadManager m = do
     mapM_ (ms_start m) needStart
     mapM_ (ms_stop m) needStop
     mapM_ (ms_reload m) needReload
-    return True
 
 killManager :: Manager -> IO ()
 killManager m = do
@@ -65,7 +63,7 @@ ms_isStarted = isEmptyMVar . ms_serviceV
 ms_maybeService :: ManagedService -> IO (Maybe Service)
 ms_maybeService = tryReadMVar . ms_serviceV
 
-ms_reload :: Manager -> ManagedService -> IO (Either ExitCode ())
+ms_reload :: Manager -> ManagedService -> IO ServiceReloadResult
 ms_reload _ ms = reloadService =<< readMVar (ms_serviceV ms)
 
 ms_start :: Manager -> ManagedService -> IO Bool
@@ -77,7 +75,7 @@ ms_start m ms = do
         return ()
     return r
 
-ms_stop :: Manager -> ManagedService -> IO ServiceResult
+ms_stop :: Manager -> ManagedService -> IO ServiceStopResult
 ms_stop _ ms = do
     s <- takeMVar (ms_serviceV ms)
     stopService s

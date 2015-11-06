@@ -2,7 +2,8 @@
 
 module Service
     ( ServiceConfig (..)
-    , ServiceResult
+    , ServiceReloadResult
+    , ServiceStopResult
     , Service
     , startService
     , reloadService
@@ -21,7 +22,9 @@ import System.Posix.Signals
 import Process
 import FileLock (withFileLockErr, SharedExclusive(Exclusive))
 
-type ServiceResult = Either SomeException ExitCode
+
+type ServiceReloadResult = Either ExitCode ()
+type ServiceStopResult = Either SomeException ExitCode
 
 data ServiceConfig = ServiceConfig
     { service_name :: String
@@ -35,7 +38,7 @@ data ServiceConfig = ServiceConfig
 data Service = Service
     { service_config :: ServiceConfig
     , service_processHandle :: ProcessHandle
-    , service_resultV :: MVar ServiceResult
+    , service_resultV :: MVar ServiceStopResult
     }
 
 startService :: ServiceConfig -> IO Service
@@ -44,7 +47,7 @@ startService config = do
     _ <- forkIO (runService config serviceV `catch` noService config serviceV)
     readMVar serviceV
 
-reloadService :: Service -> IO (Either ExitCode ())
+reloadService :: Service -> IO ServiceReloadResult
 reloadService Service{service_config=config,service_processHandle=ph} =
     withProcessHandle ph $ \case
         OpenHandle pid -> do
@@ -57,7 +60,7 @@ reloadService Service{service_config=config,service_processHandle=ph} =
 stopService :: Service -> IO ()
 stopService = terminateProcess . service_processHandle
 
-reapService :: Service -> IO ServiceResult
+reapService :: Service -> IO ServiceStopResult
 reapService = readMVar . service_resultV
 
 

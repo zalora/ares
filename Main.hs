@@ -56,7 +56,7 @@ api = Proxy
 
 type API =
     "reload" :>
-        Post '[JSON] Bool :<|>
+        Post '[] () :<|>
     "stop" :>
         Post '[] () :<|>
     "apps" :> (
