@@ -34,7 +34,9 @@ import Config
 data App = App
     { appName :: AppName
     , appPath :: AppPath
+    , appDataDir :: FilePath
     , cliFiles :: [FilePath]
+    , logFiles :: [FilePath]
     , wtfFile :: FilePath
     , needAngel :: Bool
     , needNginx :: Bool
@@ -107,18 +109,22 @@ getApp Config{..} name =
         then do
             let dirName = profilesDir </> name
                 profile = dirName </> "app"
+                aDataDir = appsDataDirRoot </> name
             exists <- doesDirectoryExist profile
             if exists
                 then do
                     path <- canonicalizePath profile
                     cli <- getCli path
+                    logs <- getLogs aDataDir
                     wtf <- getWtf path
                     needA <- doesNeedAngel path
                     needN <- doesNeedNginx path
                     return . Just $ App
                         { appName = AppName name
                         , appPath = AppPath path
+                        , appDataDir = aDataDir
                         , cliFiles = cli
+                        , logFiles = logs
                         , wtfFile = wtf
                         , needAngel = needA
                         , needNginx = needN
@@ -135,6 +141,16 @@ getCli path = do
         then filterM doesFileExist
                         =<< mapM (canonicalizePath . (cliDir </>))
                         =<< getDirectoryContents cliDir
+        else return []
+
+getLogs :: FilePath -> IO [FilePath]
+getLogs path = do
+    let logDir = path </> "log"
+    isDir <- doesDirectoryExist logDir
+    if isDir
+        then filterM doesFileExist
+                        =<< mapM (canonicalizePath . (logDir </>))
+                        =<< getDirectoryContents logDir
         else return []
 
 getWtf :: FilePath -> IO FilePath

@@ -28,6 +28,7 @@ import Config
 import Manager
 import Process
 import Service
+import SyslogNG
 import WTF
 
 main :: IO ()
@@ -86,6 +87,7 @@ server c m stop =
   where
     reload = do
         reloadManager m
+        reloadSyslogNG c
         reloadWTF c
 
 

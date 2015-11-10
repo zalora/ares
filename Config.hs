@@ -20,9 +20,11 @@ import System.IO (hPutStrLn, stderr)
 data Config = Config
     { port :: Port
     , profilesDir :: FilePath
+    , appsDataDirRoot :: FilePath
     , dataDir :: FilePath
     , runDir :: FilePath
     , builtinApps :: Map String FilePath
+    , syslogNGFile :: FilePath
     , wtfdbFile :: FilePath
     , nginxEnable :: Bool
     , nginxConfigFile :: FilePath
