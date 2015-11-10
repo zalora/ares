@@ -21,6 +21,7 @@ Executable ares
     network,
     process,
     servant-server,
+    temporary,
     text,
     transformers,
     unix,

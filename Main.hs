@@ -28,6 +28,7 @@ import Config
 import Manager
 import Process
 import Service
+import WTF
 
 main :: IO ()
 main = withConfig $ \c@Config{..} -> do
@@ -72,7 +73,7 @@ type API =
 server :: Config -> Manager -> IO () -> Server API
 server c m stop =
     liftIO (factoryReset c) :<|>
-    liftIO (reloadManager m) :<|>
+    liftIO reload :<|>
     liftIO stop :<|>
     liftIO (getApps c) :<|>
     (\(AppName name) ->
@@ -82,6 +83,10 @@ server c m stop =
         liftIO (getApp c name >>= \case
             Just app -> uninstallApp app >> return True
             _ -> return False))
+  where
+    reload = do
+        reloadManager m
+        reloadWTF c
 
 
 angelService :: Config -> ServiceConfig

@@ -23,6 +23,7 @@ data Config = Config
     , dataDir :: FilePath
     , runDir :: FilePath
     , builtinApps :: Map String FilePath
+    , wtfdbFile :: FilePath
     , nginxEnable :: Bool
     , nginxConfigFile :: FilePath
     , nginxBuiltinLogDir :: Maybe FilePath

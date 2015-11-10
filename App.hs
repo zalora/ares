@@ -35,6 +35,7 @@ data App = App
     { appName :: AppName
     , appPath :: AppPath
     , cliFiles :: [FilePath]
+    , wtfFile :: FilePath
     , needAngel :: Bool
     , needNginx :: Bool
     , profileDir :: FilePath
@@ -111,12 +112,14 @@ getApp Config{..} name =
                 then do
                     path <- canonicalizePath profile
                     cli <- getCli path
+                    wtf <- getWtf path
                     needA <- doesNeedAngel path
                     needN <- doesNeedNginx path
                     return . Just $ App
                         { appName = AppName name
                         , appPath = AppPath path
                         , cliFiles = cli
+                        , wtfFile = wtf
                         , needAngel = needA
                         , needNginx = needN
                         , profileDir = dirName
@@ -133,6 +136,14 @@ getCli path = do
                         =<< mapM (canonicalizePath . (cliDir </>))
                         =<< getDirectoryContents cliDir
         else return []
+
+getWtf :: FilePath -> IO FilePath
+getWtf path = do
+    let wtfFile = path </> "diags.json"
+    isFile <- doesFileExist wtfFile
+    if isFile
+        then return wtfFile
+        else return "/dev/null"
 
 doesNeedAngel :: FilePath -> IO Bool
 doesNeedAngel = doesFileExist . (</> "run")
