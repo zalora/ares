@@ -24,7 +24,6 @@ data Config = Config
     , dataDir :: FilePath
     , runDir :: FilePath
     , builtinApps :: Map String FilePath
-    , syslogNGFile :: FilePath
     , wtfdbFile :: FilePath
     , nginxEnable :: Bool
     , nginxConfigFile :: FilePath

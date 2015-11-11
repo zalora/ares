@@ -18,7 +18,7 @@ reloadWTF c@Config{..} =
         hClose tmpFH
         mapM_ (appendFile tmpFile)
             =<< mapM readFile
-            =<< map wtfFile <$> getApps c
+            =<< map diagsFile <$> getApps c
         renameFile tmpFile wtfdbFile
   where
     (dirName, fileName) = splitFileName wtfdbFile

@@ -24,6 +24,7 @@ Executable ares
     temporary,
     text,
     transformers,
+    Unique,
     unix,
     wai,
     wai-extra,

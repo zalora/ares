@@ -11,6 +11,7 @@ import Control.Concurrent
 import Control.Exception (bracket)
 import Control.Monad.IO.Class
 import Data.List (intercalate)
+import Data.List.Unique (sortUniq)
 import Data.Maybe (fromMaybe)
 import Data.Monoid
 import Network.Socket
@@ -28,7 +29,6 @@ import Config
 import Manager
 import Process
 import Service
-import SyslogNG
 import WTF
 
 main :: IO ()
@@ -59,6 +59,8 @@ api = Proxy
 type API =
     "factory-reset" :>
         Post '[] () :<|>
+    "logs" :>
+        Get '[JSON] [FilePath] :<|>
     "reload" :>
         Post '[] () :<|>
     "stop" :>
@@ -74,6 +76,7 @@ type API =
 server :: Config -> Manager -> IO () -> Server API
 server c m stop =
     liftIO (factoryReset c) :<|>
+    liftIO listLogs :<|>
     liftIO reload :<|>
     liftIO stop :<|>
     liftIO (getApps c) :<|>
@@ -85,9 +88,13 @@ server c m stop =
             Just app -> uninstallApp app >> return True
             _ -> return False))
   where
+    listLogs = do
+        aresLogs <- getLogFiles (dataDir c)
+        appsLogs <- concatMap logFiles <$> getApps c
+        nginxLogs <- getLogFiles (fromMaybe "/var/empty" $ nginxBuiltinLogDir c)
+        return $ sortUniq (aresLogs ++ appsLogs ++ nginxLogs)
     reload = do
         reloadManager m
-        reloadSyslogNG c
         reloadWTF c
 
 

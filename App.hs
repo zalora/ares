@@ -12,6 +12,8 @@ module App
     , getApps
     , installApp
     , uninstallApp
+
+    , getLogFiles
     )
   where
 
@@ -19,7 +21,7 @@ import qualified Data.Attoparsec.Text as Atto
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 import Control.Monad (filterM)
-import Control.Monad.Extra (unlessM, whenM)
+import Control.Monad.Extra (ifM, unlessM, whenM)
 import Data.Aeson
 import Data.Maybe (catMaybes)
 import Data.Monoid
@@ -37,7 +39,7 @@ data App = App
     , appDataDir :: FilePath
     , cliFiles :: [FilePath]
     , logFiles :: [FilePath]
-    , wtfFile :: FilePath
+    , diagsFile :: FilePath
     , needAngel :: Bool
     , needNginx :: Bool
     , profileDir :: FilePath
@@ -114,9 +116,9 @@ getApp Config{..} name =
             if exists
                 then do
                     path <- canonicalizePath profile
-                    cli <- getCli path
-                    logs <- getLogs aDataDir
-                    wtf <- getWtf path
+                    cli <- getBinFiles path
+                    logs <- getLogFiles aDataDir
+                    diags <- getDiagsFile path
                     needA <- doesNeedAngel path
                     needN <- doesNeedNginx path
                     return . Just $ App
@@ -125,7 +127,7 @@ getApp Config{..} name =
                         , appDataDir = aDataDir
                         , cliFiles = cli
                         , logFiles = logs
-                        , wtfFile = wtf
+                        , diagsFile = diags
                         , needAngel = needA
                         , needNginx = needN
                         , profileDir = dirName
@@ -133,33 +135,26 @@ getApp Config{..} name =
                 else return Nothing
         else return Nothing
 
-getCli :: FilePath -> IO [FilePath]
-getCli path = do
-    let cliDir = path </> "bin"
-    isDir <- doesDirectoryExist cliDir
-    if isDir
-        then filterM doesFileExist
-                        =<< mapM (canonicalizePath . (cliDir </>))
-                        =<< getDirectoryContents cliDir
-        else return []
+getDiagsFile :: FilePath -> IO FilePath
+getDiagsFile path = do
+    let diagsFile = path </> "diags.json"
+    ifM (doesFileExist diagsFile)
+        (return diagsFile)
+        (return "/dev/null")
 
-getLogs :: FilePath -> IO [FilePath]
-getLogs path = do
-    let logDir = path </> "log"
-    isDir <- doesDirectoryExist logDir
-    if isDir
-        then filterM doesFileExist
-                        =<< mapM (canonicalizePath . (logDir </>))
-                        =<< getDirectoryContents logDir
-        else return []
+getBinFiles :: FilePath -> IO [FilePath]
+getBinFiles = getCanonicalizedFiles . (</> "bin")
 
-getWtf :: FilePath -> IO FilePath
-getWtf path = do
-    let wtfFile = path </> "diags.json"
-    isFile <- doesFileExist wtfFile
-    if isFile
-        then return wtfFile
-        else return "/dev/null"
+getLogFiles :: FilePath -> IO [FilePath]
+getLogFiles = getCanonicalizedFiles . (</> "log")
+
+getCanonicalizedFiles :: FilePath -> IO [FilePath]
+getCanonicalizedFiles path =
+    ifM (doesDirectoryExist path)
+        (filterM doesFileExist
+            =<< mapM (canonicalizePath . (path </>))
+            =<< getDirectoryContents path)
+        (return [])
 
 doesNeedAngel :: FilePath -> IO Bool
 doesNeedAngel = doesFileExist . (</> "run")
