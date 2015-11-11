@@ -23,6 +23,7 @@ import qualified Data.Text as Text
 import Control.Monad (filterM)
 import Control.Monad.Extra (ifM, unlessM, whenM)
 import Data.Aeson
+import Data.Map.Strict (Map)
 import Data.Maybe (catMaybes)
 import Data.Monoid
 import Data.Text (Text)
@@ -37,7 +38,7 @@ data App = App
     { appName :: AppName
     , appPath :: AppPath
     , appDataDir :: FilePath
-    , cliFiles :: [FilePath]
+    , cliFiles :: Map String FilePath
     , logFiles :: [FilePath]
     , diagsFile :: FilePath
     , needAngel :: Bool
@@ -142,18 +143,22 @@ getDiagsFile path = do
         (return diagsFile)
         (return "/dev/null")
 
-getBinFiles :: FilePath -> IO [FilePath]
-getBinFiles = getCanonicalizedFiles . (</> "bin")
+getBinFiles :: FilePath -> IO (Map String FilePath)
+getBinFiles path = do
+    let binDir = path </> "bin"
+    ifM (doesDirectoryExist binDir)
+        (do names <- getDirectoryContents binDir
+            paths <- mapM (canonicalizePath . (binDir </>)) names
+            Map.fromList <$> filterM (doesFileExist . snd) (zip names paths))
+        (return Map.empty)
 
 getLogFiles :: FilePath -> IO [FilePath]
-getLogFiles = getCanonicalizedFiles . (</> "log")
-
-getCanonicalizedFiles :: FilePath -> IO [FilePath]
-getCanonicalizedFiles path =
-    ifM (doesDirectoryExist path)
+getLogFiles path = do
+    let logDir = path </> "log"
+    ifM (doesDirectoryExist logDir)
         (filterM doesFileExist
-            =<< mapM (canonicalizePath . (path </>))
-            =<< getDirectoryContents path)
+            =<< mapM (canonicalizePath . (logDir </>))
+            =<< getDirectoryContents logDir)
         (return [])
 
 doesNeedAngel :: FilePath -> IO Bool
