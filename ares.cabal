@@ -1,8 +1,11 @@
-Author: tv
+Author: Tomislav Viljetić
+Bug-Reports: https://github.com/zalora/ares/issues
 Build-Type: Simple
 Cabal-Version: >= 1.2
-Copyright: 2015 Zalora
-License: BSD3
+Copyright: 2015 Zalora South East Asia Pte Ltd
+Homepage: https://github.com/zalora/ares
+License-File: LICENSE
+License: MIT
 Maintainer: tv@zalora.com
 Name: ares
 Version: 0
