@@ -1,8 +1,5 @@
-{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE TypeOperators #-}
 
 module Main (main) where
 
@@ -24,6 +21,7 @@ import System.Exit (exitFailure)
 import System.FilePath
 import System.IO
 import System.Posix.Signals
+import Ares.API
 import Ares.App
 import Ares.Config
 import Ares.Manager
@@ -52,26 +50,6 @@ main = withConfig $ \c@Config{..} -> do
     killManager m
     waitForManager m
     exitFailure
-
-api :: Proxy API
-api = Proxy
-
-type API =
-    "factory-reset" :>
-        Post '[] () :<|>
-    "logs" :>
-        Get '[JSON] [FilePath] :<|>
-    "reload" :>
-        Post '[] () :<|>
-    "stop" :>
-        Post '[] () :<|>
-    "apps" :> (
-        Get '[JSON] [App] :<|>
-        Capture "name" AppName :> (
-            Get '[JSON] (Maybe App) :<|>
-            ReqBody '[FormUrlEncoded] AppPath :>
-                Put '[JSON] (Maybe App) :<|>
-            Delete '[JSON] Bool ))
 
 server :: Config -> Manager -> IO () -> Server API
 server c m stop =
