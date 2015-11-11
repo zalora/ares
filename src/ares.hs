@@ -46,6 +46,8 @@ main = withConfig $ \c@Config{..} -> do
     _ <- forkIO (waitForManager m >> stop)
     w <- forkIO (runWarp c api (server c m stop) >> stop)
 
+    reload c m
+
     waitForStop
     killThread w
     killManager m
@@ -55,8 +57,8 @@ main = withConfig $ \c@Config{..} -> do
 server :: Config -> Manager -> IO () -> Server API
 server c m stop =
     liftIO (factoryReset c) :<|>
-    liftIO listLogs :<|>
-    liftIO reload :<|>
+    liftIO (listLogs c) :<|>
+    liftIO (reload c m) :<|>
     liftIO stop :<|>
     liftIO (getApps c) :<|>
     (\(AppName name) ->
@@ -66,15 +68,18 @@ server c m stop =
         liftIO (getApp c name >>= \case
             Just app -> uninstallApp app >> return True
             _ -> return False))
-  where
-    listLogs = do
-        aresLogs <- getLogFiles (dataDir c)
-        appsLogs <- concatMap logFiles <$> getApps c
-        nginxLogs <- getLogFiles (fromMaybe "/var/empty" $ nginxBuiltinLogDir c)
-        return $ sortUniq (aresLogs ++ appsLogs ++ nginxLogs)
-    reload = do
-        reloadManager m
-        reloadWTF c
+
+listLogs :: Config -> IO [FilePath]
+listLogs c = do
+    aresLogs <- getLogFiles (dataDir c)
+    appsLogs <- concatMap logFiles <$> getApps c
+    nginxLogs <- getLogFiles (fromMaybe "/var/empty" $ nginxBuiltinLogDir c)
+    return $ sortUniq (aresLogs ++ appsLogs ++ nginxLogs)
+
+reload :: Config -> Manager -> IO ()
+reload c m = do
+    reloadManager m
+    reloadWTF c
 
 
 angelService :: Config -> ServiceConfig
