@@ -3,7 +3,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 
-module App
+module Ares.App
     ( App (..)
     , AppName (AppName, unAppName)
     , AppPath (AppPath, unAppPath)
@@ -31,7 +31,7 @@ import Servant (FromFormUrlEncoded (fromFormUrlEncoded), FromText (fromText))
 import System.Directory
 import System.FilePath
 import System.Process
-import Config
+import Ares.Config
 
 data App = App
     { appName :: AppName

@@ -1,4 +1,4 @@
-module Manager
+module Ares.Manager
     ( Manager
     , newManager
     , reloadManager
@@ -11,7 +11,7 @@ import Control.Concurrent
 import Control.Monad (filterM, when)
 import Control.Monad.Extra (partitionM, whenM)
 import Data.Maybe (catMaybes)
-import Service
+import Ares.Service
 
 
 data Manager = Manager

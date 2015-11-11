@@ -1,6 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 
-module FileLock
+module Ares.FileLock
     ( module System.FileLock
     , withFileLockErr
     )

@@ -30,4 +30,5 @@ Executable ares
     wai-extra,
     warp
   GHC-Options: -Wall -threaded -rtsopts -with-rtsopts=-N
-  Main-Is: Main.hs
+  Hs-Source-Dirs: src
+  Main-Is: ares.hs

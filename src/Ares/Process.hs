@@ -1,6 +1,6 @@
 -- This code was (mostly) copypasted from process-1.3.0.0, System.Process
 
-module Process
+module Ares.Process
     ( module System.Process
     , module System.Process.Internals
     , withCreateProcess

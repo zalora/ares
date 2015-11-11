@@ -1,6 +1,6 @@
 {-# LANGUAGE RecordWildCards #-}
 
-module WTF
+module Ares.WTF
     ( reloadWTF
     )
   where
@@ -9,8 +9,8 @@ import System.Directory (renameFile)
 import System.FilePath (splitFileName)
 import System.IO (hClose)
 import System.IO.Temp (withTempFile)
-import App
-import Config
+import Ares.App
+import Ares.Config
 
 reloadWTF :: Config -> IO ()
 reloadWTF c@Config{..} =

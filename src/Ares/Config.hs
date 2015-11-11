@@ -1,7 +1,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE LambdaCase #-}
 
-module Config
+module Ares.Config
     ( Config (..)
     , Port
     , withConfig

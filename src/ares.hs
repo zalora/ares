@@ -24,12 +24,12 @@ import System.Exit (exitFailure)
 import System.FilePath
 import System.IO
 import System.Posix.Signals
-import App
-import Config
-import Manager
-import Process
-import Service
-import WTF
+import Ares.App
+import Ares.Config
+import Ares.Manager
+import Ares.Process
+import Ares.Service
+import Ares.WTF
 
 main :: IO ()
 main = withConfig $ \c@Config{..} -> do

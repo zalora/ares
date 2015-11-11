@@ -1,6 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 
-module Service
+module Ares.Service
     ( ServiceConfig (..)
     , ServiceReloadResult
     , ServiceStopResult
@@ -19,8 +19,8 @@ import System.FilePath
 import System.Exit
 import System.Directory
 import System.Posix.Signals
-import Process
-import FileLock (withFileLockErr, SharedExclusive(Exclusive))
+import Ares.Process
+import Ares.FileLock (withFileLockErr, SharedExclusive(Exclusive))
 
 
 type ServiceReloadResult = Either ExitCode ()
