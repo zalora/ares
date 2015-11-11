@@ -32,6 +32,7 @@ import Ares.WTF
 main :: IO ()
 main = withConfig $ \c@Config{..} -> do
     hSetBuffering stderr LineBuffering
+    createDirectoryIfMissing True dataDir
     setCurrentDirectory dataDir
     setEnv "HOME" dataDir
 
