@@ -25,6 +25,9 @@ data Config = Config
     , runDir :: FilePath
     , builtinApps :: Map String FilePath
     , wtfdbFile :: FilePath
+    , cgHierName :: Maybe String
+        -- ^ Name to be used when mounting a cgroup hierarchy.
+        -- If set to `Nothing`, then use `"ares"`.
     , nginxEnable :: Bool
     , nginxConfigFile :: FilePath
     , nginxBuiltinLogDir :: Maybe FilePath
@@ -33,6 +36,7 @@ data Config = Config
         --
         -- [1]: http://nginx.org/en/docs/configure.html
     , angelPath :: FilePath
+    , cgexecPath :: FilePath
     , nginxPath :: FilePath
     , nixEnvPath :: FilePath
     }

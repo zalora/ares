@@ -23,6 +23,7 @@ import System.IO
 import System.Posix.Signals
 import Ares.API
 import Ares.App
+import Ares.CGroup
 import Ares.Config
 import Ares.Manager
 import Ares.Process
@@ -88,18 +89,19 @@ angelService c@Config{..} = ServiceConfig
       , service_dataDir = dataDir
       , service_runDir = runDir
       , service_createProcess = proc angelPath [configFile]
-      , service_reload =
-          writeFile configFile =<< toAngelConfig <$> getApps c
+      , service_reload = do
+          apps <- filter needAngel <$> getApps c
+          mapM_ (cgPrepare c) apps
+          writeFile configFile (concatMap toAngelEntry apps)
       , service_isNeeded = any needAngel <$> getApps c
       }
   where
     configFile = runDir </> "angel.conf"
     logDir = dataDir </> "log"
     logFile name sub = logDir </> intercalate "." ["angel", name, sub, "log"]
-    toAngelConfig = concatMap toAngelEntry . filter needAngel
-    toAngelEntry App{appName=AppName name,appPath=AppPath path} = unlines
+    toAngelEntry a@App{appName=AppName name} = unlines
         [ name <> " {"
-        , "  exec = " <> show (path </> "run")
+        , "  exec = " <> show (cgExecCommand c a)
         , "  stdout = " <> show (logFile name "stdout")
         , "  stderr = " <> show (logFile name "stderr")
         , "}"
