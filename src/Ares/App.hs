@@ -81,6 +81,7 @@ factoryReset :: Config -> IO ()
 factoryReset c@Config{..} = do
     whenM (doesDirectoryExist profilesDir)
           (removeDirectoryRecursive profilesDir)
+    createDirectoryIfMissing True profilesDir
     mapM_ (uncurry (installApp c)) (Map.toList builtinApps)
 
 getApps :: Config -> IO [App]
