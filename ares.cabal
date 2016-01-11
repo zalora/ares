@@ -21,7 +21,6 @@ Executable ares
     extra,
     filelock,
     filepath,
-    linux-mount,
     network,
     process,
     servant-server,
