@@ -24,6 +24,7 @@ import System.Posix.Signals
 import Ares.API
 import Ares.App
 import Ares.Config
+import Ares.FileLock (withFileLockErr, SharedExclusive(Exclusive))
 import Ares.Manager
 import Ares.Process
 import Ares.Service
@@ -127,13 +128,16 @@ nginxService c@Config{..} = ServiceConfig
 
 
 runWarp :: HasServer layout => Config -> Proxy layout -> Server layout -> IO ()
-runWarp Config{..} p s =
-    withSock sockFile $ \sock -> do
-        bind sock (SockAddrUnix sockFile)
-        listen sock maxListenQueue
-        runSettingsSocket settings sock app
+runWarp Config{..} p s = do
+    createDirectoryIfMissing True runDir
+    withFileLockErr lockFile Exclusive $ \_lock -> do
+        withSock sockFile $ \sock -> do
+            bind sock (SockAddrUnix sockFile)
+            listen sock maxListenQueue
+            runSettingsSocket settings sock app
   where
     app = logger (serve p s)
+    lockFile = runDir </> "warp.lock"
     logger ap rq respond = do
         rs <- logStdout ap rq respond
         hFlush stdout
