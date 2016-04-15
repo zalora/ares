@@ -7,6 +7,7 @@ import Control.Arrow ((&&&))
 import Control.Concurrent
 import Control.Exception (bracket)
 import Control.Monad.IO.Class
+import Data.Bits ((.|.))
 import Data.List (intercalate)
 import Data.List.Unique (sortUniq)
 import Data.Maybe (fromMaybe)
@@ -20,6 +21,7 @@ import System.Environment (setEnv)
 import System.Exit (exitFailure)
 import System.FilePath
 import System.IO
+import System.Posix.Files (groupReadMode, groupWriteMode, ownerReadMode, ownerWriteMode, setFileMode, socketMode)
 import System.Posix.Signals
 import Ares.API
 import Ares.App
@@ -133,6 +135,7 @@ runWarp Config{..} p s = do
     withFileLockErr lockFile Exclusive $ \_lock -> do
         withSock sockFile $ \sock -> do
             bind sock (SockAddrUnix sockFile)
+            setFileMode sockFile sockMode
             listen sock maxListenQueue
             runSettingsSocket settings sock app
   where
@@ -144,6 +147,8 @@ runWarp Config{..} p s = do
         return rs
     settings = setPort port defaultSettings
     sockFile = runDir </> "warp.sock"
+    sockMode = socketMode .|. ownerWriteMode .|. ownerReadMode
+                          .|. groupWriteMode .|. groupReadMode
 
 withSock :: FilePath -> (Socket -> IO a) -> IO a
 withSock sockFile =
