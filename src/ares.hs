@@ -27,6 +27,7 @@ import Ares.API
 import Ares.App
 import Ares.Config
 import Ares.FileLock (withFileLockErr, SharedExclusive(Exclusive))
+import Ares.IO
 import Ares.Manager
 import Ares.Process
 import Ares.Service
@@ -46,8 +47,8 @@ main = withConfig $ \c@Config{..} -> do
     (stop, waitForStop) <- (flip putMVar () &&& readMVar) <$> newEmptyMVar
 
     mapM_ (\sig -> installHandler sig (Catch stop) Nothing) [sigINT, sigTERM]
-    _ <- forkIO (waitForManager m >> stop)
-    w <- forkIO (runWarp c api (server c m stop) >> stop)
+    _ <- forkIO (withPrintIOError (waitForManager m) >> stop)
+    w <- forkIO (withPrintIOError (runWarp c api (server c m stop)) >> stop)
 
     reload c m
 
