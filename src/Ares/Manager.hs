@@ -8,9 +8,10 @@ module Ares.Manager
   where
 
 import Control.Concurrent
+import Control.Conditional ((<&&>), ifM)
 import Control.Monad (filterM, when)
 import Control.Monad.Extra (partitionM, whenM)
-import Data.Maybe (catMaybes)
+import Data.Maybe (catMaybes, fromJust, isJust)
 import Ares.Service
 
 
@@ -45,6 +46,10 @@ waitForManager m@Manager{manager_deadV=deadV} = do
     mapM_ stopService services
     mapM_ reapService services
 
+isManagerAlive :: Manager -> IO Bool
+isManagerAlive Manager{manager_deadV=deadV} =
+    maybe True (const False) <$> tryReadMVar deadV
+
 runningServices :: Manager -> IO [Service]
 runningServices = fmap catMaybes . mapM ms_maybeService . manager_services
 
@@ -66,12 +71,21 @@ ms_maybeService = tryReadMVar . ms_serviceV
 ms_reload :: Manager -> ManagedService -> IO ServiceReloadResult
 ms_reload _ ms = reloadService =<< readMVar (ms_serviceV ms)
 
+ms_onFailure :: ManagedService -> Maybe (IO ())
+ms_onFailure = service_onFailure . ms_config
+
 ms_start :: Manager -> ManagedService -> IO Bool
 ms_start m ms = do
     s <- startService (ms_config ms)
     r <- tryPutMVar (ms_serviceV ms) s
     when r $ do
-        _ <- forkIO (reapService s >> whenM (ms_isNeeded ms) (killManager m))
+        _ <- forkIO $ do
+            _ <- reapService s
+            _ <- tryTakeMVar (ms_serviceV ms)
+            whenM (ms_isNeeded ms)
+                  (ifM (pure (isJust (ms_onFailure ms)) <&&> isManagerAlive m)
+                       (fromJust (ms_onFailure ms) >> reloadManager m)
+                       (killManager m))
         return ()
     return r
 

@@ -96,6 +96,7 @@ angelService c@Config{..} = ServiceConfig
           apps <- filter needAngel <$> getApps c
           writeFile configFile (concatMap toAngelEntry apps)
       , service_isNeeded = any needAngel <$> getApps c
+      , service_onFailure = Nothing
       }
   where
     configFile = runDir </> "angel.conf"
@@ -123,6 +124,7 @@ nginxService c@Config{..} = ServiceConfig
             , logDir
             ]
     , service_isNeeded = any needNginx <$> getApps c
+    , service_onFailure = threadDelay <$> nginxRestartOnFailureDelay
     }
   where
     builtinLogDir = fromMaybe (prefix </> "logs") nginxBuiltinLogDir

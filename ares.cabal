@@ -2,7 +2,7 @@ Author: Tomislav Viljetic
 Bug-Reports: https://github.com/zalora/ares/issues
 Build-Type: Simple
 Cabal-Version: >= 1.2
-Copyright: 2015 Zalora South East Asia Pte Ltd
+Copyright: 2015-2016 Zalora South East Asia Pte Ltd
 Homepage: https://github.com/zalora/ares
 License-File: LICENSE
 License: MIT
@@ -16,6 +16,7 @@ Executable ares
     attoparsec,
     base,
     bytestring,
+    cond,
     containers,
     directory,
     extra,

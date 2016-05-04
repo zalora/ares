@@ -32,6 +32,7 @@ data Config = Config
         -- If set to `Nothing`, then use `dataDir </> "logs"`.
         --
         -- [1]: http://nginx.org/en/docs/configure.html
+    , nginxRestartOnFailureDelay :: Maybe Int
     , angelPath :: FilePath
     , nginxPath :: FilePath
     , nixEnvPath :: FilePath
