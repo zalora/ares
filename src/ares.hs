@@ -123,7 +123,7 @@ nginxService c@Config{..} = ServiceConfig
             , prefix
             , logDir
             ]
-    , service_isNeeded = any needNginx <$> getApps c
+    , service_isNeeded = return True
     , service_onFailure = threadDelay <$> nginxRestartOnFailureDelay
     }
   where
