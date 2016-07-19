@@ -93,6 +93,7 @@ angelService c@Config{..} = ServiceConfig
       , service_runDir = runDir
       , service_createProcess = proc angelPath [configFile]
       , service_reload = do
+          createDirectoryIfMissing True logDir
           apps <- getApps c
           writeFile configFile (concatMap toAngelEntry apps)
       , service_onFailure = Nothing
