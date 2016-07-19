@@ -32,7 +32,6 @@ data ServiceConfig = ServiceConfig
     , service_runDir :: FilePath
     , service_createProcess :: CreateProcess
     , service_reload :: IO ()
-    , service_isNeeded :: IO Bool
     , service_onFailure :: Maybe (IO ())
     }
 

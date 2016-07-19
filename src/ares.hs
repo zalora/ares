@@ -93,9 +93,8 @@ angelService c@Config{..} = ServiceConfig
       , service_runDir = runDir
       , service_createProcess = proc angelPath [configFile]
       , service_reload = do
-          apps <- filter needAngel <$> getApps c
+          apps <- getApps c
           writeFile configFile (concatMap toAngelEntry apps)
-      , service_isNeeded = any needAngel <$> getApps c
       , service_onFailure = Nothing
       }
   where
@@ -123,7 +122,6 @@ nginxService c@Config{..} = ServiceConfig
             , prefix
             , logDir
             ]
-    , service_isNeeded = any needNginx <$> getApps c
     , service_onFailure = threadDelay <$> nginxRestartOnFailureDelay
     }
   where

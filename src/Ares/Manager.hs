@@ -9,8 +9,8 @@ module Ares.Manager
 
 import Control.Concurrent
 import Control.Conditional ((<&&>), ifM)
-import Control.Monad (filterM, when)
-import Control.Monad.Extra (partitionM, whenM)
+import Control.Monad (when)
+import Control.Monad.Extra (partitionM)
 import Data.Maybe (catMaybes, fromJust, isJust)
 import Ares.Service
 
@@ -28,10 +28,9 @@ newManager configs =
 reloadManager :: Manager -> IO ()
 reloadManager m = do
     (stopped, started) <- partitionM ms_isStarted (manager_services m)
-    (needReload, needStop) <- partitionM ms_isNeeded started
-    needStart <- filterM ms_isNeeded stopped
+    let needReload = started
+        needStart  = stopped
     mapM_ (ms_start m) needStart
-    mapM_ (ms_stop m) needStop
     mapM_ (ms_reload m) needReload
 
 killManager :: Manager -> IO ()
@@ -59,9 +58,6 @@ data ManagedService = ManagedService
     , ms_serviceV :: MVar Service
     }
 
-ms_isNeeded :: ManagedService -> IO Bool
-ms_isNeeded = service_isNeeded . ms_config
-
 ms_isStarted :: ManagedService -> IO Bool
 ms_isStarted = isEmptyMVar . ms_serviceV
 
@@ -82,15 +78,8 @@ ms_start m ms = do
         _ <- forkIO $ do
             _ <- reapService s
             _ <- tryTakeMVar (ms_serviceV ms)
-            whenM (ms_isNeeded ms)
-                  (ifM (pure (isJust (ms_onFailure ms)) <&&> isManagerAlive m)
-                       (fromJust (ms_onFailure ms) >> reloadManager m)
-                       (killManager m))
+            (ifM (pure (isJust (ms_onFailure ms)) <&&> isManagerAlive m)
+                 (fromJust (ms_onFailure ms) >> reloadManager m)
+                 (killManager m))
         return ()
     return r
-
-ms_stop :: Manager -> ManagedService -> IO ServiceStopResult
-ms_stop _ ms = do
-    s <- takeMVar (ms_serviceV ms)
-    stopService s
-    reapService s

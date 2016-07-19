@@ -41,8 +41,6 @@ data App = App
     , cliFiles :: Map String FilePath
     , logFiles :: [FilePath]
     , diagsFile :: FilePath
-    , needAngel :: Bool
-    , needNginx :: Bool
     , profileDir :: FilePath
     }
   deriving
@@ -121,8 +119,6 @@ getApp Config{..} name =
                     cli <- getBinFiles path
                     logs <- getLogFiles aDataDir
                     diags <- getDiagsFile path
-                    needA <- doesNeedAngel path
-                    needN <- doesNeedNginx path
                     return . Just $ App
                         { appName = AppName name
                         , appPath = AppPath path
@@ -130,8 +126,6 @@ getApp Config{..} name =
                         , cliFiles = cli
                         , logFiles = logs
                         , diagsFile = diags
-                        , needAngel = needA
-                        , needNginx = needN
                         , profileDir = dirName
                         }
                 else return Nothing
@@ -161,16 +155,6 @@ getLogFiles path = do
             =<< mapM (canonicalizePath . (logDir </>))
             =<< getDirectoryContents logDir)
         (return [])
-
-doesNeedAngel :: FilePath -> IO Bool
-doesNeedAngel = doesFileExist . (</> "run")
-
-doesNeedNginx :: FilePath -> IO Bool
-doesNeedNginx path =
-    any (==True) <$> mapM (doesFileExist . ((path </> "nginx") </>))
-        [ "default-locations.conf"
-        , "servers.conf"
-        ]
 
 isAppName :: FilePath -> Bool
 isAppName = either (const False) (const True) . parseAppName
